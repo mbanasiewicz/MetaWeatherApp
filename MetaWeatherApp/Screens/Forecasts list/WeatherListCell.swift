@@ -15,7 +15,7 @@ final class WeatherListCell: UICollectionViewCell {
         didSet {
             guard let forecast = forecast else { return }
             cityNameLabel.text = forecast.cityName
-            weatherDetailsLabel.text = forecast.temperature + "\n" + forecast.airPressure
+            weatherDetailsLabel.text = forecast.currentTemperature + "\n" + forecast.airPressure
             if let imageUrl = forecast.weatherImageUrl {
                 weatherImageView.loadImage(
                     url: imageUrl,

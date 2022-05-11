@@ -8,11 +8,11 @@ final class ForecastsListViewController: UICollectionViewController {
     private let dependencies: Dependencies
     private let viewModel: ForecastsListViewModelType
     
-    private var forecasts: [ForecastViewModel] = [] {
+    private var forecastsViewModels: [ForecastViewModel] = [] {
         didSet {
             var snapshot = NSDiffableDataSourceSnapshot<Section, String>()
             snapshot.appendSections([.main])
-            snapshot.appendItems(forecasts.map { $0.locationId }.sorted(), toSection: .main)
+            snapshot.appendItems(forecastsViewModels.map { $0.locationId }, toSection: .main)
             dataSource.apply(snapshot, animatingDifferences: false)
         }
     }
@@ -23,7 +23,10 @@ final class ForecastsListViewController: UICollectionViewController {
     
     private var dataSource: UICollectionViewDiffableDataSource<Section, String>!
     
-    init(viewModel: ForecastsListViewModelType, dependencies: Dependencies) {
+    init(
+        viewModel: ForecastsListViewModelType,
+        dependencies: Dependencies
+    ) {
         self.dependencies = dependencies
         self.viewModel = viewModel
         super.init(
@@ -38,13 +41,14 @@ final class ForecastsListViewController: UICollectionViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Meta Weather"
+        navigationItem.backButtonTitle = ""
         configureCollectionView()
         loadData()
     }
     
     private func configureCollectionView() {
         let cellRegistration = UICollectionView.CellRegistration<WeatherListCell, String> { (cell, indexPath, locationId) in
-            guard let forecast = self.forecasts.first(where: { $0.locationId == locationId }) else { fatalError() }
+            guard let forecast = self.forecastsViewModels.first(where: { $0.locationId == locationId }) else { fatalError() }
             cell.dependencies = self.dependencies
             cell.forecast = forecast
         }
@@ -79,7 +83,12 @@ final class ForecastsListViewController: UICollectionViewController {
     
     @MainActor
     private func updateUi(_ forecasts: [ForecastViewModel]) {
-        self.forecasts = forecasts
+        self.forecastsViewModels = forecasts.sorted(by: { lhs, rhs in lhs.locationId > rhs.locationId })
         collectionView.refreshControl?.endRefreshing()
+    }
+    
+    override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        collectionView.deselectItem(at: indexPath, animated: false)
+        navigationController?.pushViewController(ForecastDetailsViewController(viewModel: forecastsViewModels[indexPath.item]), animated: true)
     }
 }
