@@ -8,24 +8,15 @@ protocol ForecastsListViewModelType: AnyObject {
 }
 
 final class ForecastsListViewModel: ForecastsListViewModelType {
-    typealias Dependencies = ForecastService.Dependencies
-    private let dependencies: Dependencies
-    private let service: ForecastService
-    
-    init(dependencies: Dependencies) {
-        self.service = ForecastService(dependencies: dependencies)
-        self.dependencies = dependencies
+    private let service: ForecastServiceType
+    private let supportedCities: [City]
+    init(supportedCities: [City], service: ForecastServiceType) {
+        self.supportedCities = supportedCities
+        self.service = service
     }
     
     func loadForecasts() async throws -> [ForecastViewModel] {
-        do {
-            let forecasts = try await service.loadForecasts(for: City.supportedCities)
-            let viewModels = forecasts.compactMap { ForecastViewModel.init(forecast: $0) }
-            return viewModels
-        } catch {
-            print(error)
-            return []
-        }
-        
+        let forecasts = try await service.loadForecasts(for: supportedCities)
+        return forecasts.compactMap { ForecastViewModel(forecast: $0) }
     }
 }

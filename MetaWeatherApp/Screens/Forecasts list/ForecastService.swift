@@ -3,7 +3,11 @@
 
 import Foundation
 
-final class ForecastService {
+protocol ForecastServiceType: AnyObject {
+    func loadForecasts(for cities: [City]) async throws -> [Forecast]
+}
+
+final class ForecastService: ForecastServiceType {
     typealias Dependencies = HasHTTPClient
     
     private let baseUrl = URL(string: "https://www.metaweather.com/api/")!
@@ -27,8 +31,8 @@ final class ForecastService {
         }
     }
     
-    func loadForcast(for city: City) async throws -> Forecast {
-        let url = baseUrl.appendingPathComponent("/api/location/\(city.locationId)")
+    private func loadForcast(for city: City) async throws -> Forecast {
+        let url = baseUrl.appendingPathComponent("location/\(city.locationId)")
         let request = URLRequest(
             url: url,
             cachePolicy: .useProtocolCachePolicy,

@@ -19,7 +19,6 @@ final class HTTPClient: HTTPClientType {
     }
     
     func loadData(request: URLRequest) async throws -> Data {
-        // todo
         let (data, _) = try await session.data(for: request)
         return data
     }

@@ -9,13 +9,21 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     private let dependecies = Dependencies()
     
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        guard let windowScene = scene as? UIWindowScene else { return }
+    func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions
+    ) {
+        guard let windowScene = scene as? UIWindowScene, !isRunningTests else { return }
+        
         let newWindow = UIWindow(windowScene: windowScene)
-        let viewModel = ForecastsListViewModel(dependencies: dependecies)
-        let forecastViewController = ForecastsListViewController(viewModel: viewModel, dependencies: dependecies)
-        newWindow.rootViewController = NavigationController(rootViewController: forecastViewController)
+        
+        let rootViewController = ForecastsListViewController.make(using: dependecies)
+        
+        newWindow.rootViewController = NavigationController(rootViewController: rootViewController)
+        
         window = newWindow
+        
         newWindow.makeKeyAndVisible()
     }
 
@@ -29,3 +37,11 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneDidEnterBackground(_ scene: UIScene) { }
 }
+
+private let isRunningTests: Bool = {
+    #if targetEnvironment(simulator)
+    return NSClassFromString("XCTestCase") != nil
+    #else
+    return false
+    #endif
+}()

@@ -29,9 +29,15 @@ final class ForecastsListViewController: UICollectionViewController {
     ) {
         self.dependencies = dependencies
         self.viewModel = viewModel
+        
+        var configuration = UICollectionLayoutListConfiguration(appearance: .plain)
+        configuration.showsSeparators = false
+        let layout = UICollectionViewCompositionalLayout.list(using: configuration)
         super.init(
-            collectionViewLayout: UICollectionViewCompositionalLayout.list(using: UICollectionLayoutListConfiguration(appearance: .plain))
+            collectionViewLayout: layout
         )
+        title = "Meta Weather"
+        navigationItem.backButtonTitle = ""
     }
     
     required init?(coder: NSCoder) {
@@ -40,8 +46,6 @@ final class ForecastsListViewController: UICollectionViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Meta Weather"
-        navigationItem.backButtonTitle = ""
         configureCollectionView()
         loadData()
     }
@@ -70,9 +74,14 @@ final class ForecastsListViewController: UICollectionViewController {
     }
     
     private func loadData() {
+        collectionView.refreshControl?.beginRefreshing()
         Task {
-            let forecasts = try? await self.viewModel.loadForecasts()
-            self.updateUi(forecasts ?? [])
+            do {
+                let forecasts = try await self.viewModel.loadForecasts()
+                self.updateUi(.success(forecasts))
+            } catch {
+                self.updateUi(.failure(error))
+            }
         }
     }
     
@@ -82,13 +91,55 @@ final class ForecastsListViewController: UICollectionViewController {
     }
     
     @MainActor
-    private func updateUi(_ forecasts: [ForecastViewModel]) {
-        self.forecastsViewModels = forecasts.sorted(by: { lhs, rhs in lhs.locationId > rhs.locationId })
-        collectionView.refreshControl?.endRefreshing()
+    private func updateUi(_ result: Result<[ForecastViewModel], Error>) {
+        defer {
+            collectionView.refreshControl?.endRefreshing()
+        }
+        
+        switch result {
+        case .failure(let error): ()
+            let alert = UIAlertController(
+                title: "Unable to load data",
+                message: "\(error.localizedDescription)",
+                preferredStyle: .alert
+            )
+            
+            alert.addAction(
+                UIAlertAction(
+                    title: "OK",
+                    style: .default
+                )
+            )
+            alert.addAction(
+                UIAlertAction(
+                    title: "Try again",
+                    style: .default,
+                    handler: { [weak self] _ in self?.loadData() }
+                )
+            )
+            present(alert, animated: true, completion: nil)
+        case .success(let viewModels):
+            forecastsViewModels = viewModels.sorted(by: { lhs, rhs in lhs.locationId > rhs.locationId })
+        }
     }
     
     override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         collectionView.deselectItem(at: indexPath, animated: false)
         navigationController?.pushViewController(ForecastDetailsViewController(viewModel: forecastsViewModels[indexPath.item]), animated: true)
+    }
+}
+
+extension ForecastsListViewController {
+    static func make(
+        using dependencies: ForecastsListViewController.Dependencies & ForecastService.Dependencies
+    ) -> ForecastsListViewController {
+        let viewModel = ForecastsListViewModel(
+            supportedCities: City.supportedCities,
+            service: ForecastService(dependencies: dependencies)
+        )
+        return ForecastsListViewController(
+            viewModel: viewModel,
+            dependencies: dependencies
+        )
     }
 }
